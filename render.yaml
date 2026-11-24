@@ -1,0 +1,35 @@
+# إعداد النشر على Render (Blueprint): يقرأه Render تلقائيًا من المستودع.
+# القيم المعلّمة بـ sync: false يطلبها Render منك عند الإنشاء ولا تُحفظ في Git.
+services:
+  - type: web
+    name: last-use
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      - key: TRUST_PROXY
+        value: "true"
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: AUTH_EMAIL_DOMAIN
+        value: users.lastuse.local
+      - key: SUPABASE_STORAGE_BUCKET
+        value: item-images
+      # زر «تحميل البيانات التجريبية» — غيّرها إلى "true" إن أردته متاحًا للزوار
+      - key: ALLOW_DEMO_DATA
+        value: "false"
+      # فحص دوري للتذكيرات كل ساعة (يعمل فقط أثناء تشغيل الخادم)
+      - key: REMINDER_INTERVAL_MINUTES
+        value: "60"

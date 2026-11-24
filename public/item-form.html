@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>إضافة غرض — آخر استخدام</title>
+  <meta name="description" content="منصة «آخر استخدام» لتسجيل الممتلكات وتذكيرك بمواعيد استخدامها وانتهاء صلاحيتها واستبدالها.">
+  <meta name="theme-color" content="#1f5a46">
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Readex+Pro:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">تخطَّ إلى المحتوى</a>
+  <header id="app-header" class="site-header"></header>
+  <main id="main" tabindex="-1">
+    <div class="container" style="max-width:860px">
+      <div class="page-head"><div><h1 id="form-title">إضافة غرض</h1><p>الحقول المعلّمة بـ <span class="req">*</span> إلزامية، وما عداها اختياري.</p></div></div>
+      <div id="form-host">
+        <form id="item-form" class="stack hidden" method="post" action="item-form.html" novalidate>
+          <fieldset>
+            <legend>البيانات الأساسية</legend>
+            <div class="form-grid">
+              <div class="field full"><label for="name">اسم الغرض <span class="req">*</span></label><input id="name" name="name" type="text" maxlength="120" required><span class="error" data-for="name"></span></div>
+              <div class="field"><label for="category">التصنيف</label><select id="category" name="category"></select><span class="error" data-for="category"></span></div>
+              <div class="field" id="other-wrap"><label for="category_other">اسم التصنيف (عند اختيار «أخرى»)</label><input id="category_other" name="category_other" type="text" maxlength="40" placeholder="مثال: سفر"><span class="error" data-for="category_other"></span></div>
+              <div class="field"><label for="condition">حالة الغرض</label><select id="condition" name="condition"></select><span class="hint">إن كان معطّلًا سنقترح إصلاحه.</span><span class="error" data-for="condition"></span></div>
+              <div class="field full">
+                <span class="label" id="img-label">صورة (اختيارية)</span>
+                <div class="img-picker">
+                  <div class="img-preview" id="img-preview" aria-hidden="true">🖼️</div>
+                  <div class="stack" style="flex:1">
+                    <input id="image" name="image" type="file" accept="image/jpeg,image/png,image/webp" aria-labelledby="img-label" aria-describedby="img-hint">
+                    <span class="hint" id="img-hint">JPG أو PNG أو WEBP، حتى ٢ ميغابايت (تُصغَّر الصورة تلقائيًا).</span>
+                    <button type="button" class="btn btn-sm btn-danger hidden" id="remove-image">إزالة الصورة</button>
+                    <span class="error" data-for="image"></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>التواريخ</legend>
+            <div class="form-grid">
+              <div class="field"><label for="purchase_date">تاريخ الشراء</label><input id="purchase_date" name="purchase_date" type="date"><span class="error" data-for="purchase_date"></span></div>
+              <div class="field"><label for="expiry_date">تاريخ انتهاء الصلاحية (اختياري)</label><input id="expiry_date" name="expiry_date" type="date"><span class="error" data-for="expiry_date"></span></div>
+              <div class="field"><label for="last_used_at">تاريخ آخر استخدام</label><input id="last_used_at" name="last_used_at" type="date"><span class="error" data-for="last_used_at"></span></div>
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>التذكيرات</legend>
+            <div class="form-grid">
+              <div class="field full"><label class="checkbox"><input type="checkbox" id="needs_replacement" name="needs_replacement"> يحتاج إلى استبدال دوري (مثل فلتر أو رأس فرشاة)</label></div>
+              <div class="field" id="rep-wrap"><label for="replacement_interval">مدة التكرار</label>
+                <div class="input-group"><input id="replacement_interval" name="replacement_interval" type="number" min="1" inputmode="numeric"><select id="replacement_unit" name="replacement_unit" aria-label="وحدة المدة"><option value="days">يوم</option><option value="months">شهر</option></select></div>
+                <span class="hint">يُحسب الموعد من تاريخ الشراء (أو آخر استخدام إن لم يوجد).</span>
+                <span class="error" data-for="replacement_interval"></span></div>
+              <div class="field"><label for="alert_days_before">التنبيه قبل الانتهاء أو الاستبدال (أيام)</label><input id="alert_days_before" name="alert_days_before" type="number" min="0" max="365" inputmode="numeric"><span class="hint" id="alert-hint"></span><span class="error" data-for="alert_days_before"></span></div>
+              <div class="field"><label for="unused_after_days">يُعد قليل الاستخدام بعد (أيام)</label><input id="unused_after_days" name="unused_after_days" type="number" min="1" max="3650" inputmode="numeric"><span class="hint" id="unused-hint"></span><span class="error" data-for="unused_after_days"></span></div>
+            </div>
+          </fieldset>
+          <div class="field"><label for="notes">ملاحظات</label><textarea id="notes" name="notes" maxlength="1000"></textarea><span class="error" data-for="notes"></span></div>
+          <div class="alert alert-danger hidden" role="alert" id="form-error"></div>
+          <div class="row"><button class="btn btn-primary btn-lg" type="submit" id="save-btn">حفظ</button><a class="btn btn-lg" id="cancel-link" href="items.html">إلغاء</a></div>
+        </form>
+      </div>
+    </div>
+  </main>
+  <footer id="app-footer"></footer>
+  <script type="module" src="js/item-form.js"></script>
+</body>
+</html>

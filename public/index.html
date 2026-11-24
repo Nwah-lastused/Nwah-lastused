@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>الرئيسية — آخر استخدام</title>
+  <meta name="description" content="منصة «آخر استخدام» لتسجيل الممتلكات وتذكيرك بمواعيد استخدامها وانتهاء صلاحيتها واستبدالها.">
+  <meta name="theme-color" content="#1f5a46">
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Readex+Pro:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">تخطَّ إلى المحتوى</a>
+  <header id="app-header" class="site-header"></header>
+  <main id="main" tabindex="-1">
+    <section class="hero">
+      <div class="container inner">
+        <div>
+          <h1>آخر استخدام</h1>
+          <p class="tagline">لا تدع أغراضك تُنسى</p>
+          <p class="lead">سجّل أغراضك ومشترياتك في مكان واحد، وسنذكّرك قبل أن تنتهي صلاحيتها، وحين يحين موعد استبدالها، وإذا مرّ وقت طويل دون أن تستخدمها — مع اقتراحات مسؤولة لما لم تعد تحتاجه.</p>
+          <div class="row" style="margin-top:1.5rem">
+            <a class="btn btn-primary btn-lg" id="start-btn" href="login.html">ابدأ الآن</a>
+            <a class="btn btn-lg" href="#how">كيف تعمل؟</a>
+          </div>
+          <p class="small muted" id="mode-note" style="margin-top:1rem"></p>
+        </div>
+        <img class="logo-big" src="assets/logo-full.png" alt="شعار منصة آخر استخدام: حقيبة تسوق خضراء عليها رمز إعادة الاستخدام وورقة نبات" width="380" height="380">
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="benefits-title">
+      <div class="container">
+        <h2 id="benefits-title">لماذا «آخر استخدام»؟</h2>
+        <div class="grid grid-3" style="margin-top:1rem">
+          <article class="card feature"><div class="ico" aria-hidden="true">🌿</div><h3>تقليل الهدر</h3><p class="muted">تنبيه قبل انتهاء الصلاحية يعني طعامًا ودواءً أقل في سلة المهملات، ومالًا أقل يضيع.</p></article>
+          <article class="card feature"><div class="ico" aria-hidden="true">🔔</div><h3>تذكّر ما تملك</h3><p class="muted">اعرف متى استخدمت كل غرض آخر مرة، واحصل على تذكير بما لم تلمسه منذ مدة.</p></article>
+          <article class="card feature"><div class="ico" aria-hidden="true">🗂️</div><h3>تنظيم الممتلكات</h3><p class="muted">تصنيفات وبحث وتصفية تجعل أغراض البيت كلها أمامك، على الجوال والكمبيوتر.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="how" aria-labelledby="how-title">
+      <div class="container">
+        <h2 id="how-title">كيف تعمل؟</h2>
+        <div class="grid grid-3 steps" style="margin-top:1.75rem">
+          <div class="card"><h3>سجّل أغراضك</h3><p class="muted">الاسم والتصنيف وتاريخ الشراء والصلاحية، وصورة إن أردت.</p></div>
+          <div class="card"><h3>سجّل الاستخدام بنقرة</h3><p class="muted">زر «استخدمته الآن» يحدّث آخر استخدام ويحفظ السجل.</p></div>
+          <div class="card"><h3>تابع التنبيهات وقرّر</h3><p class="muted">احتفظ به، أعد استخدامه، أهدِه أو تبرّع به — وسجّل أثرك.</p></div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <footer id="app-footer"></footer>
+  <script type="module" src="js/landing.js"></script>
+</body>
+</html>
