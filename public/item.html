@@ -7,17 +7,18 @@
   <meta name="description" content="منصة «آخر استخدام» لتسجيل الممتلكات وتذكيرك بمواعيد استخدامها وانتهاء صلاحيتها واستبدالها.">
   <meta name="theme-color" content="#1f5a46">
   <link rel="icon" type="image/png" href="assets/favicon.png">
+  <script src="js/boot.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Readex+Pro:wght@500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-  <a class="skip-link" href="#main">تخطَّ إلى المحتوى</a>
+  <a class="skip-link" href="#main" data-i18n="skip">تخطَّ إلى المحتوى</a>
   <header id="app-header" class="site-header"></header>
   <main id="main" tabindex="-1">
     <div class="container">
-      <p style="margin-top:1.25rem"><a href="items.html">→ العودة إلى أغراضي</a></p>
+      <p class="back-link"><a href="items.html" data-i18n="detail.back">→ العودة إلى أغراضي</a></p>
       <div id="detail" aria-live="polite"></div>
     </div>
   </main>

@@ -1,25 +1,27 @@
 import { HttpError } from '../utils/http.js';
+import { t, hasKey } from '../../public/js/shared/i18n.js';
 
 export function apiNotFound(req, res) {
-  res.status(404).json({ ok: false, error: { code: 'not_found', message: 'المسار غير موجود.' } });
+  res.status(404).json({ ok: false, error: { code: 'not_found', message: t('errors.not_found', {}, req.lang) } });
 }
 
-// معالج أخطاء موحد: لا يكشف رسائل قاعدة البيانات أو أسرار الخادم للمستخدم.
 // eslint-disable-next-line no-unused-vars
 export function errorHandler(err, req, res, next) {
-  if (err?.type === 'entity.too.large') {
-    err = new HttpError(413, 'حجم الطلب كبير جدًا (الحد الأقصى للصورة ٢ ميغابايت).', { code: 'too_large' });
-  } else if (err?.type === 'entity.parse.failed') {
-    err = new HttpError(400, 'صيغة JSON غير صالحة.', { code: 'bad_json' });
-  }
-  const status = err instanceof HttpError ? err.status : 500;
+  if (err?.type === 'entity.too.large') err = new HttpError(413, 'too_large');
+  else if (err?.type === 'entity.parse.failed') err = new HttpError(400, 'bad_json');
+
+  const known = err instanceof HttpError;
+  const status = known ? err.status : 500;
+  const code = known ? err.code : 'server_error';
   if (status >= 500) console.error('[error]', req.method, req.originalUrl, err?.cause || err);
+
+  const key = `errors.${code}`;
   res.status(status).json({
     ok: false,
     error: {
-      code: err instanceof HttpError ? err.code : 'server_error',
-      message: err instanceof HttpError ? err.message : 'حدث خطأ في الخادم. حاول مجددًا لاحقًا.',
-      details: err instanceof HttpError ? err.details : null
+      code,
+      message: hasKey(key, req.lang) ? t(key, {}, req.lang) : t('errors.server_error', {}, req.lang),
+      details: known ? err.details : null
     }
   });
 }

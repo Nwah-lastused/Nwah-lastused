@@ -1,13 +1,11 @@
 -- =====================================================================
--- «آخر استخدام» — مخطط قاعدة البيانات (Supabase / PostgreSQL)
--- شغّل هذا الملف كاملًا من Supabase Dashboard → SQL Editor.
--- آمن لإعادة التشغيل (idempotent) قدر الإمكان.
+-- Last Use — database schema (Supabase / PostgreSQL). Idempotent.
 -- =====================================================================
 
 create extension if not exists pgcrypto;
 
 -- ---------------------------------------------------------------------
--- دالة عامة لتحديث updated_at
+-- updated_at trigger
 -- ---------------------------------------------------------------------
 create or replace function public.set_updated_at()
 returns trigger language plpgsql as $$
@@ -17,7 +15,7 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------
--- 1) profiles: ملف المستخدم (الاسم، اسم المستخدم، الإعدادات العامة)
+-- profiles: name, username and default settings
 -- ---------------------------------------------------------------------
 create table if not exists public.profiles (
   id          uuid primary key references auth.users (id) on delete cascade,
@@ -35,8 +33,7 @@ drop trigger if exists profiles_updated_at on public.profiles;
 create trigger profiles_updated_at before update on public.profiles
   for each row execute function public.set_updated_at();
 
--- إنشاء الملف تلقائيًا عند تسجيل مستخدم جديد من بيانات user_metadata (full_name, username).
--- إذا كان اسم المستخدم محجوزًا يفشل إنشاء المستخدم كاملًا (لا حسابات يتيمة).
+-- Creates the profile from user metadata; a taken username aborts the whole sign-up.
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
@@ -54,7 +51,7 @@ create trigger on_auth_user_created after insert on auth.users
   for each row execute function public.handle_new_user();
 
 -- ---------------------------------------------------------------------
--- 2) items: الأغراض
+-- items
 -- ---------------------------------------------------------------------
 create table if not exists public.items (
   id                    uuid primary key default gen_random_uuid(),
@@ -82,7 +79,7 @@ create table if not exists public.items (
   constraint items_expiry_after_purchase check (expiry_date is null or purchase_date is null or expiry_date >= purchase_date),
   constraint items_replacement_complete check (
     not needs_replacement or (replacement_interval is not null and replacement_unit is not null)),
-  -- يمنع ربط صورة خارج مجلد المالك
+  -- image must live in the owner's storage folder
   constraint items_image_in_owner_folder check (image_path is null or image_path like owner_id::text || '/%')
 );
 create index if not exists items_owner_idx on public.items (owner_id, status);
@@ -94,7 +91,7 @@ create trigger items_updated_at before update on public.items
   for each row execute function public.set_updated_at();
 
 -- ---------------------------------------------------------------------
--- 3) item_usage_logs: سجل الاستخدام
+-- item_usage_logs
 -- ---------------------------------------------------------------------
 create table if not exists public.item_usage_logs (
   id          uuid primary key default gen_random_uuid(),
@@ -108,7 +105,7 @@ create index if not exists usage_item_idx on public.item_usage_logs (item_id, us
 create index if not exists usage_owner_idx on public.item_usage_logs (owner_id, used_at desc);
 
 -- ---------------------------------------------------------------------
--- 4) notifications: التنبيهات (واحد فقط لكل غرض + نوع + موعد استحقاق)
+-- notifications: one per (item, type, due_date)
 -- ---------------------------------------------------------------------
 create table if not exists public.notifications (
   id            uuid primary key default gen_random_uuid(),
@@ -132,7 +129,7 @@ create trigger notifications_updated_at before update on public.notifications
   for each row execute function public.set_updated_at();
 
 -- ---------------------------------------------------------------------
--- 5) item_actions: قرارات الاستدامة (سجل الأثر)
+-- item_actions: sustainability decisions
 -- ---------------------------------------------------------------------
 create table if not exists public.item_actions (
   id           uuid primary key default gen_random_uuid(),
@@ -146,7 +143,7 @@ create index if not exists actions_item_idx on public.item_actions (item_id, cre
 create index if not exists actions_owner_idx on public.item_actions (owner_id, created_at desc);
 
 -- ---------------------------------------------------------------------
--- يمنع ربط سجل بغرض يملكه مستخدم آخر (حتى مع RLS على كل جدول)
+-- ownership check for child rows
 -- ---------------------------------------------------------------------
 create or replace function public.owns_item(p_item uuid)
 returns boolean language sql stable security definer set search_path = public as $$
@@ -154,7 +151,7 @@ returns boolean language sql stable security definer set search_path = public as
 $$;
 
 -- =====================================================================
--- سياسات RLS: كل مستخدم يرى ويعدّل بياناته فقط
+-- Row Level Security: users can only access their own rows
 -- =====================================================================
 alter table public.profiles        enable row level security;
 alter table public.items           enable row level security;
@@ -162,7 +159,7 @@ alter table public.item_usage_logs enable row level security;
 alter table public.notifications   enable row level security;
 alter table public.item_actions    enable row level security;
 
--- profiles: قراءة وتحديث الملف الشخصي فقط (الإنشاء عبر trigger، والحذف بحذف المستخدم)
+-- profiles (insert via trigger, delete via auth.users cascade)
 drop policy if exists "profiles_select_own" on public.profiles;
 create policy "profiles_select_own" on public.profiles for select to authenticated using (id = auth.uid());
 drop policy if exists "profiles_update_own" on public.profiles;
@@ -210,11 +207,11 @@ create policy "actions_insert_own" on public.item_actions for insert to authenti
 drop policy if exists "actions_delete_own" on public.item_actions;
 create policy "actions_delete_own" on public.item_actions for delete to authenticated using (owner_id = auth.uid());
 
--- لا صلاحيات للزوار غير المسجلين على الجداول
+-- no table access for anonymous clients
 revoke all on public.profiles, public.items, public.item_usage_logs, public.notifications, public.item_actions from anon;
 
 -- =====================================================================
--- التخزين: حاوية خاصة لصور الأغراض، المسار يبدأ بمعرف المستخدم: <uid>/<item_id>/<file>
+-- Storage: private bucket, objects under <user_id>/<item_id>/<file>
 -- =====================================================================
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('item-images', 'item-images', false, 2097152, array['image/jpeg','image/png','image/webp'])

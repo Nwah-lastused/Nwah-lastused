@@ -1,4 +1,6 @@
-// عميل HTTP لواجهات الخادم /api — يحفظ الجلسة ويجدد رمز الدخول تلقائيًا.
+// HTTP client for /api: stores the session, refreshes expired tokens and sends the UI language.
+import { t, getLang } from './shared/i18n.js';
+
 const SESSION_KEY = 'lu_session';
 
 export class ApiError extends Error {
@@ -24,29 +26,30 @@ export function setSession(session) {
 }
 
 async function raw(method, path, body, token) {
-  const headers = { Accept: 'application/json' };
+  const headers = { Accept: 'application/json', 'X-Lang': getLang() };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   if (token) headers.Authorization = `Bearer ${token}`;
   let res;
   try {
     res = await fetch(path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
   } catch {
-    throw new ApiError('تعذّر الاتصال بالخادم. تحقق من اتصالك ثم حاول مجددًا.', { code: 'network' });
+    throw new ApiError(t('errors.network'), { code: 'network' });
   }
   let json = null;
   try {
     json = await res.json();
   } catch {
-    /* استجابة بلا JSON */
+    json = null;
   }
   if (!res.ok || json?.ok === false) {
     const err = json?.error || {};
-    throw new ApiError(err.message || 'حدث خطأ غير متوقع.', { status: res.status, code: err.code, details: err.details });
+    throw new ApiError(err.message || t('ui.unexpected'), { status: res.status, code: err.code, details: err.details });
   }
   return json?.data;
 }
 
 let refreshing = null;
+
 async function refreshSession() {
   const s = getSession();
   if (!s?.refresh_token) return null;
@@ -67,7 +70,7 @@ async function refreshSession() {
   return refreshing;
 }
 
-/** طلب مصادق عليه؛ عند 401 يحاول التجديد مرة واحدة. */
+/** Authenticated request; retries once after refreshing on 401. */
 export async function request(method, path, body) {
   const s = getSession();
   try {

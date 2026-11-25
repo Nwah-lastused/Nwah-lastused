@@ -5,14 +5,14 @@ import { maybeRunForUser } from '../services/reminderService.js';
 import { buildDashboard } from '../../public/js/shared/summary.js';
 
 const router = express.Router();
+const LOG_WINDOW_MS = 31 * 86400000;
 
-// GET /api/dashboard — ملخص محسوب من البيانات الفعلية فقط
 router.get(
   '/',
   asyncHandler(async (req, res) => {
     const { db, user } = req;
     await maybeRunForUser(db, user.id);
-    const since = new Date(Date.now() - 31 * 86400000).toISOString();
+    const since = new Date(Date.now() - LOG_WINDOW_MS).toISOString();
     const [settings, items, notifications, actions, logs] = await Promise.all([
       getSettings(db, user.id),
       listItems(db, user.id),

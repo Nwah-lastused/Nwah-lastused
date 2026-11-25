@@ -1,5 +1,3 @@
-# إعداد النشر على Render (Blueprint): يقرأه Render تلقائيًا من المستودع.
-# القيم المعلّمة بـ sync: false يطلبها Render منك عند الإنشاء ولا تُحفظ في Git.
 services:
   - type: web
     name: last-use
@@ -27,9 +25,7 @@ services:
         value: users.lastuse.local
       - key: SUPABASE_STORAGE_BUCKET
         value: item-images
-      # زر «تحميل البيانات التجريبية» — غيّرها إلى "true" إن أردته متاحًا للزوار
       - key: ALLOW_DEMO_DATA
         value: "false"
-      # فحص دوري للتذكيرات كل ساعة (يعمل فقط أثناء تشغيل الخادم)
       - key: REMINDER_INTERVAL_MINUTES
         value: "60"

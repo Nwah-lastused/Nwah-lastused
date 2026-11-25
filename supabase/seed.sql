@@ -1,12 +1,7 @@
 -- =====================================================================
--- «آخر استخدام» — بيانات تجريبية آمنة
--- تشغيل هذا الملف لا يضيف أي بيانات بحد ذاته؛ ينشئ دالة تُستدعى صراحةً لمستخدم تختاره.
--- الطريقة الأسهل: زر «تحميل البيانات التجريبية» داخل التطبيق (صفحة الإعدادات).
---
--- الاستخدام من SQL Editor بعد إنشاء حساب تجريبي من صفحة التسجيل:
---   select public.load_demo_data('demo_user');          -- يضيف/يستبدل الأغراض التجريبية
---   select public.clear_demo_data('demo_user');         -- يحذف الأغراض التجريبية فقط
--- التواريخ نسبية لليوم (بتوقيت الرياض) لتظهر كل الحالات دائمًا.
+-- Last Use — demo data functions (admin only). Running this file inserts no data.
+--   select public.load_demo_data('<username>');
+--   select public.clear_demo_data('<username>');
 -- =====================================================================
 
 create or replace function public.load_demo_data(p_username text)
@@ -16,18 +11,17 @@ security definer
 set search_path = public
 as $$
 declare
-  v_uid  uuid;
+  v_uid   uuid;
   v_today date := (now() at time zone 'Asia/Riyadh')::date;
   v_count integer;
 begin
   select id into v_uid from public.profiles where lower(username) = lower(p_username);
   if v_uid is null then
-    raise exception 'لا يوجد مستخدم باسم %', p_username;
+    raise exception 'user % not found', p_username;
   end if;
 
   delete from public.items where owner_id = v_uid and is_demo;
 
-  -- (name, category, category_other, purchase, expiry, last_used_days_ago, needs_rep, interval, unit, alert, unused_after, condition, notes)
   insert into public.items (owner_id, is_demo, name, category, category_other, purchase_date, expiry_date, last_used_at,
                             needs_replacement, replacement_interval, replacement_unit, alert_days_before, unused_after_days, condition, notes)
   select v_uid, true, d.name, d.category, d.category_other,
@@ -51,11 +45,10 @@ begin
 
   get diagnostics v_count = row_count;
 
-  -- سجل استخدام واحد لكل غرض عند تاريخ آخر استخدام
   insert into public.item_usage_logs (owner_id, item_id, used_at)
   select owner_id, id, last_used_at from public.items where owner_id = v_uid and is_demo and last_used_at is not null;
 
-  return v_count; -- التنبيهات تُحسب تلقائيًا عند فتح التطبيق أو عبر POST /api/reminders/check
+  return v_count;
 end $$;
 
 create or replace function public.clear_demo_data(p_username text)
@@ -72,6 +65,5 @@ begin
   return v_count;
 end $$;
 
--- الدالتان للمشرف فقط (SQL Editor / service_role) — لا يستطيع مستخدم استدعاؤهما لحساب غيره.
 revoke all on function public.load_demo_data(text)  from public, anon, authenticated;
 revoke all on function public.clear_demo_data(text) from public, anon, authenticated;

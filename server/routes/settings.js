@@ -18,14 +18,14 @@ router.get(
 router.patch(
   '/',
   asyncHandler(async (req, res) => {
-    const v = validateSettings(req.body);
-    if (!v.ok) throw badRequest('تحقق من قيم الإعدادات.', v.errors);
+    const v = validateSettings(req.body, req.lang);
+    if (!v.ok) throw badRequest(v.errors);
     const p = await getProfile(req.db, req.user.id);
     const settings = mergeSettings({ ...(p?.settings || {}), ...v.value });
     const patch = { settings };
     if (v.full_name) patch.full_name = v.full_name;
     unwrap(await req.db.from('profiles').update(patch).eq('id', req.user.id));
-    resetThrottle(req.user.id); // تغيّر المهل يستدعي إعادة حساب التنبيهات عند الطلب التالي
+    resetThrottle(req.user.id);
     ok(res, settings);
   })
 );

@@ -7,26 +7,27 @@
   <meta name="description" content="منصة «آخر استخدام» لتسجيل الممتلكات وتذكيرك بمواعيد استخدامها وانتهاء صلاحيتها واستبدالها.">
   <meta name="theme-color" content="#1f5a46">
   <link rel="icon" type="image/png" href="assets/favicon.png">
+  <script src="js/boot.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Readex+Pro:wght@500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-  <a class="skip-link" href="#main">تخطَّ إلى المحتوى</a>
+  <a class="skip-link" href="#main" data-i18n="skip">تخطَّ إلى المحتوى</a>
   <header id="app-header" class="site-header"></header>
   <main id="main" tabindex="-1">
     <div class="container">
       <div class="page-head">
-        <div><h1>التنبيهات</h1><p>تنبيهات داخل المنصة تُحسب من تواريخ أغراضك. لا تُرسل حاليًا رسائل بريد أو إشعارات جوال.</p></div>
+        <div><h1 data-i18n="title.notifications">التنبيهات</h1><p data-i18n="notif.subtitle">تنبيهات داخل المنصة تُحسب من تواريخ أغراضك.</p></div>
         <div class="actions">
-          <button class="btn" type="button" id="read-all">تعليم الكل كمقروء</button>
-          <button class="btn btn-primary" type="button" id="run-check">فحص التذكيرات الآن</button>
+          <button class="btn" type="button" id="read-all" data-i18n="notif.readAll">تعليم الكل كمقروء</button>
+          <button class="btn btn-primary" type="button" id="run-check" data-i18n="notif.check">فحص التذكيرات الآن</button>
         </div>
       </div>
-      <div class="row" style="justify-content:space-between;align-items:flex-start">
-        <div class="tabs" role="tablist" aria-label="حالة التنبيه" id="status-tabs"></div>
-        <div class="field" style="min-width:200px"><label for="type-filter" class="sr-only">نوع التنبيه</label><select id="type-filter"><option value="">كل الأنواع</option></select></div>
+      <div class="row notif-filters">
+        <div class="tabs" role="tablist" aria-label="حالة التنبيه" data-i18n-attr="aria-label:notif.statusLabel" id="status-tabs"></div>
+        <div class="field type-filter"><label for="type-filter" class="sr-only" data-i18n="notif.typeLabel">نوع التنبيه</label><select id="type-filter"></select></div>
       </div>
       <div id="list" class="stack" aria-live="polite"></div>
     </div>

@@ -1,7 +1,7 @@
-// عملاء Supabase للخادم.
-// - anon: لتسجيل الدخول وتجديد الجلسة.
-// - user: عميل بصلاحيات المستخدم (JWT) فتطبَّق سياسات RLS على كل استعلام.
-// - admin: بمفتاح service_role لإنشاء الحسابات دون تحقق بريد، وللفحص الدوري لكل المستخدمين. للخادم فقط.
+// Supabase clients.
+// anon:  sign-in and token refresh.
+// user:  carries the user's JWT so Row Level Security applies to every query.
+// admin: service-role client for account creation and scheduled checks (server only).
 import { env } from './env.js';
 
 let createClientFn = null;
@@ -42,7 +42,7 @@ export async function adminClient() {
   return admin;
 }
 
-/** للاختبارات: حقن مُنشئ عملاء بديل. */
+/** Test hook: inject an alternative client factory. */
 export function __setCreateClient(fn) {
   createClientFn = fn;
   admin = null;

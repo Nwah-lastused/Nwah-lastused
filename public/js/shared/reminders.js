@@ -1,12 +1,13 @@
-// منطق التذكيرات والحالات والتوصيات — مصدر واحد يستخدمه المحول المحلي والخادم.
+// Reminder rules, item state and suggestions. Shared by the local adapter and the server.
 import { DEFAULT_SETTINGS, categoryInfo } from './constants.js';
-import { todayISO, toDateISO, daysBetween, addDays, addMonths, daysLabel } from './dates.js';
+import { todayISO, toDateISO, daysBetween, addDays, addMonths, daysLabel, formatDate } from './dates.js';
+import { t } from './i18n.js';
 
 export function mergeSettings(settings) {
   return { ...DEFAULT_SETTINGS, ...(settings || {}) };
 }
 
-/** الإعدادات الفعلية للغرض: إعداد الغرض إن وُجد، وإلا الإعداد العام. */
+/** Item-level overrides take precedence over the user's defaults. */
 export function effectiveItemSettings(item, settings) {
   const s = mergeSettings(settings);
   const own = (v) => (v === null || v === undefined || v === '' ? null : Number(v));
@@ -17,20 +18,14 @@ export function effectiveItemSettings(item, settings) {
   };
 }
 
-/**
- * أساس حساب «قلة الاستخدام»: آخر استخدام، وإن لم يوجد فتاريخ الشراء، وإلا تاريخ الإضافة.
- */
+/** Low-use baseline: last use, else purchase date, else creation date. */
 export function usageBaseDate(item) {
   return toDateISO(item.last_used_at) || item.purchase_date || toDateISO(item.created_at);
 }
 
 /**
- * موعد الاستبدال الدوري.
- * الأساس المختار: تاريخ الشراء (بداية عمر الوحدة الحالية)، لأن الاستبدال الدوري
- * (فلتر، رأس فرشاة...) يرتبط بعمر القطعة لا بآخر مرة استُخدمت فيها؛ لو اعتمدنا
- * آخر استخدام لتأجّل الموعد مع كل استخدام وهذا عكس المقصود.
- * عند غياب تاريخ الشراء نرجع إلى آخر استخدام ثم تاريخ الإضافة.
- * قرار «استبدلته» يحدّث تاريخ الشراء إلى اليوم فتبدأ دورة جديدة.
+ * Replacement due date. Based on the purchase date (start of the current unit's life),
+ * falling back to last use, then creation date. Recording "replaced" resets the purchase date.
  */
 export function replacementDueDate(item) {
   if (!item.needs_replacement || !item.replacement_interval) return null;
@@ -40,57 +35,24 @@ export function replacementDueDate(item) {
   return item.replacement_unit === 'months' ? addMonths(base, n) : addDays(base, n);
 }
 
-function isConsumable(item) {
-  return Boolean(categoryInfo(item.category).consumable);
+/** Suggestion key for an item, or null. */
+export function recommendationKey(item, ev) {
+  if (item.status && item.status !== 'active') return null;
+  if (item.condition === 'broken') return 'repair';
+  if (item.condition === 'damaged' || ev.expired) return item.category === 'medicine' ? 'disposeMedicine' : 'dispose';
+  if (!ev.isUnused) return null;
+  if (categoryInfo(item.category).consumable) return 'useOrGift';
+  if (ev.daysSinceUse >= ev.settings.unusedDays * 2) return 'giftDonate';
+  return 'reuse';
 }
 
-/** توصية قابلة للتجاهل — اقتراح وليست حكمًا نهائيًا. */
-export function recommend(item, ev) {
-  if (item.status && item.status !== 'active') return null;
-  if (item.condition === 'broken') {
-    return {
-      key: 'repair',
-      title: 'أصلحه',
-      text: 'ذكرت أنه معطّل؛ إصلاحه لدى فنّي موثوق غالبًا أوفر وأقل هدرًا من شراء بديل.'
-    };
-  }
-  if (item.condition === 'damaged' || ev.expired) {
-    const medicine = item.category === 'medicine';
-    return {
-      key: 'dispose',
-      title: 'تخلّص منه بطريقة مناسبة',
-      text: medicine
-        ? 'لا تستخدم الأدوية المنتهية. اسأل الصيدلية القريبة إن كانت تستقبلها لإتلافها بأمان.'
-        : 'لا تستخدمه إن انتهت صلاحيته أو تلف. افصله عن النفايات العامة إن أمكن واتّبع إرشادات جهتك المحلية لإعادة التدوير.'
-    };
-  }
-  if (ev.isUnused) {
-    if (isConsumable(item)) {
-      return {
-        key: 'use-or-gift',
-        title: 'استخدمه أو أهدِه قبل أن يتلف',
-        text: 'ما زال صالحًا؛ ضعه في مكان ظاهر لتستخدمه، أو أهدِه لمن يحتاجه قبل انتهاء صلاحيته.'
-      };
-    }
-    if (ev.daysSinceUse >= ev.settings.unusedDays * 2) {
-      return {
-        key: 'gift-donate',
-        title: 'أهدِه أو تبرّع به',
-        text: 'لم تستخدمه منذ مدة طويلة وهو صالح؛ قد يكون أنفع لشخص آخر أو لجهة خيرية.'
-      };
-    }
-    return {
-      key: 'reuse',
-      title: 'أعد استخدامه',
-      text: 'ربما له استعمال آخر لم تفكر فيه، أو يكفي أن تضعه في مكان تراه فيه لتتذكره.'
-    };
-  }
-  return null;
+export function recommendationText(key, lang) {
+  return key ? { key, title: t(`rec.${key}.title`, {}, lang), text: t(`rec.${key}.text`, {}, lang) } : null;
 }
 
 /**
- * تقييم شامل للغرض في يوم معيّن: الحالات، المسببات، التوصية.
- * triggers = التنبيهات المستحقة الآن (كل منها له مفتاح type + dueDate لمنع التكرار).
+ * Evaluates an item on a given day. Returns structured data only (no text);
+ * use formatTrigger / recommendationText to render it in a language.
  */
 export function evaluateItem(item, settings, now = new Date()) {
   const s = effectiveItemSettings(item, settings);
@@ -123,7 +85,7 @@ export function evaluateItem(item, settings, now = new Date()) {
   if (base) {
     ev.daysSinceUse = Math.max(0, daysBetween(base, today));
     ev.unusedDueDate = addDays(base, s.unusedDays);
-    // المنتهي أو التالف لا يُنبَّه عليه كـ«قليل الاستخدام» لأن استخدامه غير مستحسن أصلًا.
+    // Expired or damaged items are not flagged as low-use.
     ev.isUnused = ev.daysSinceUse > s.unusedDays && !ev.expired && item.condition !== 'damaged';
   }
 
@@ -135,78 +97,68 @@ export function evaluateItem(item, settings, now = new Date()) {
 
   if (active) {
     if (item.expiry_date && ev.expiringSoon) {
-      ev.triggers.push({
-        type: 'expiry',
-        dueDate: item.expiry_date,
-        title: ev.expired ? `انتهت صلاحية «${item.name}»` : `صلاحية «${item.name}» تقترب من نهايتها`,
-        reason: ev.expired
-          ? `انتهت صلاحيته منذ ${daysLabel(ev.daysToExpiry)}.`
-          : ev.daysToExpiry === 0
-            ? 'تنتهي صلاحيته اليوم.'
-            : `تنتهي صلاحيته خلال ${daysLabel(ev.daysToExpiry)}.`,
-        suggestion: ev.expired
-          ? 'لا تستخدمه، وتخلّص منه بطريقة مناسبة.'
-          : 'استخدمه قريبًا أو أهدِه لمن يحتاجه قبل انتهاء صلاحيته.'
-      });
+      ev.triggers.push({ type: 'expiry', dueDate: item.expiry_date, days: ev.daysToExpiry });
     }
     if (ev.isUnused) {
-      ev.triggers.push({
-        type: 'unused',
-        dueDate: ev.unusedDueDate,
-        title: `«${item.name}» لم يُستخدم منذ مدة`,
-        reason: `مضى ${daysLabel(ev.daysSinceUse)} دون استخدام (الحد ${daysLabel(s.unusedDays)}).`,
-        suggestion: null // تُملأ من التوصية أدناه
-      });
+      ev.triggers.push({ type: 'unused', dueDate: ev.unusedDueDate, days: ev.daysSinceUse, limit: s.unusedDays });
     }
     if (ev.replacementDue && ev.replacementSoon) {
-      const d = ev.daysToReplacement;
-      ev.triggers.push({
-        type: 'replacement',
-        dueDate: ev.replacementDue,
-        title: `حان موعد استبدال «${item.name}»`,
-        reason:
-          d < 0 ? `تجاوز موعد الاستبدال بـ ${daysLabel(d)}.` : d === 0 ? 'موعد الاستبدال اليوم.' : `موعد الاستبدال بعد ${daysLabel(d)}.`,
-        suggestion: 'استبدله بوحدة جديدة ثم سجّل «استبدلته» لتبدأ دورة جديدة.'
-      });
+      ev.triggers.push({ type: 'replacement', dueDate: ev.replacementDue, days: ev.daysToReplacement });
     }
   }
 
-  ev.recommendation = recommend(item, ev);
-  for (const t of ev.triggers) {
-    if (!t.suggestion) t.suggestion = ev.recommendation ? `${ev.recommendation.title}: ${ev.recommendation.text}` : null;
-  }
-
-  if (!active) {
-    ev.state = 'archived';
-    ev.stateLabel = 'مؤرشف';
-  } else if (ev.triggers.length || item.condition === 'broken' || item.condition === 'damaged') {
-    ev.state = 'attention';
-    ev.stateLabel = 'يحتاج انتباهك';
-  } else {
-    ev.state = 'regular';
-    ev.stateLabel = 'منتظم';
-  }
+  ev.recommendation = recommendationKey(item, ev);
+  if (!active) ev.state = 'archived';
+  else if (ev.triggers.length || item.condition === 'broken' || item.condition === 'damaged') ev.state = 'attention';
+  else ev.state = 'regular';
   return ev;
+}
+
+/** Renders a trigger (or a stored notification) as title / reason / suggestion text. */
+export function formatTrigger({ type, days, limit, dueDate, recommendation }, name, lang, now = new Date()) {
+  const d = days ?? (dueDate ? daysBetween(todayISO(now), dueDate) : 0);
+  const p = { name, days: daysLabel(d, lang) };
+  if (type === 'expiry') {
+    const expired = d < 0;
+    return {
+      title: t(expired ? 'trig.expiry.titleExpired' : 'trig.expiry.titleSoon', p, lang),
+      reason: t(expired ? 'trig.expiry.reasonExpired' : d === 0 ? 'trig.expiry.reasonToday' : 'trig.expiry.reasonSoon', p, lang),
+      suggestion: t(expired ? 'trig.expiry.suggestExpired' : 'trig.expiry.suggestSoon', p, lang)
+    };
+  }
+  if (type === 'replacement') {
+    return {
+      title: t('trig.replacement.title', p, lang),
+      reason: t(d < 0 ? 'trig.replacement.reasonOver' : d === 0 ? 'trig.replacement.reasonToday' : 'trig.replacement.reasonSoon', p, lang),
+      suggestion: t('trig.replacement.suggest', p, lang)
+    };
+  }
+  const rec = recommendationText(recommendation, lang);
+  return {
+    title: t('trig.unused.title', p, lang),
+    reason: limit
+      ? t('trig.unused.reason', { ...p, limit: daysLabel(limit, lang) }, lang)
+      : t('trig.unused.reasonSince', { date: formatDate(dueDate, {}, lang) }, lang),
+    suggestion: rec ? `${rec.title}: ${rec.text}` : t('trig.unused.suggest', p, lang)
+  };
 }
 
 export const notificationKey = (n) => `${n.type}|${n.due_date}`;
 
-/** التنبيهات المرغوب وجودها الآن لغرض واحد (بصيغة سجلات قاعدة البيانات). */
-export function desiredNotifications(item, settings, now = new Date()) {
-  return evaluateItem(item, settings, now).triggers.map((t) => ({
+/** Notifications that should exist for an item now. Stored text uses the given language. */
+export function desiredNotifications(item, settings, now = new Date(), lang = 'ar') {
+  const ev = evaluateItem(item, settings, now);
+  return ev.triggers.map((trigger) => ({
     item_id: item.id,
-    type: t.type,
-    due_date: t.dueDate,
-    title: t.title,
-    reason: t.reason,
-    suggestion: t.suggestion
+    type: trigger.type,
+    due_date: trigger.dueDate,
+    ...formatTrigger({ ...trigger, recommendation: ev.recommendation }, item.name, lang, now)
   }));
 }
 
 /**
- * خطة المزامنة لمنع التكرار:
- * - يُنشأ التنبيه مرة واحدة فقط لكل (غرض، نوع، موعد استحقاق) — حتى لو أغلقه المستخدم لا يعود.
- * - أي تنبيه مفتوح لم يعد مستحقًا (مثلًا بعد تسجيل استخدام) يُغلق تلقائيًا بسبب resolved.
+ * De-duplication plan: one notification per (item, type, due date), never recreated once it exists.
+ * Open notifications that are no longer due are closed as "resolved".
  */
 export function planNotificationSync(existingForItem, desired) {
   const existingKeys = new Set(existingForItem.map(notificationKey));
@@ -217,7 +169,7 @@ export function planNotificationSync(existingForItem, desired) {
   };
 }
 
-/** التعديلات التي يُحدثها قرار الاستدامة على الغرض. */
+/** Item changes caused by a sustainability decision. */
 export function actionEffects(actionType, now = new Date()) {
   switch (actionType) {
     case 'reused':
@@ -232,7 +184,6 @@ export function actionEffects(actionType, now = new Date()) {
       return { patch: { status: actionType }, logUsage: false };
     case 'kept':
     default:
-      // «احتفظت به»: يغلق تنبيه قلة الاستخدام الحالي فقط، ولن يتكرر حتى يتغير موعد استحقاقه.
       return { patch: {}, logUsage: false, closeTypes: ['unused'] };
   }
 }

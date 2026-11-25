@@ -7,7 +7,6 @@ import { maybeRunForUser, runForUser } from '../services/reminderService.js';
 export const notificationsRouter = express.Router();
 notificationsRouter.param('id', (req, res, next) => validateIdParam(req, res, next));
 
-// GET /api/notifications?status=open|new|read|closed|all&type=expiry|unused|replacement
 notificationsRouter.get(
   '/',
   asyncHandler(async (req, res) => {
@@ -17,9 +16,10 @@ notificationsRouter.get(
     const names = new Map(items.map((i) => [i.id, i.name]));
     const counts = { new: 0, read: 0, closed: 0 };
     all.forEach((n) => counts[n.status]++);
+
     const status = queryString(req.query.status, 10) || 'open';
     const type = queryString(req.query.type, 20);
-    let list = all.map((n) => ({ ...n, item_name: names.get(n.item_id) || 'غرض محذوف' }));
+    let list = all.map((n) => ({ ...n, item_name: names.get(n.item_id) || null }));
     if (status === 'open') list = list.filter((n) => n.status !== 'closed');
     else if (status !== 'all') list = list.filter((n) => n.status === status);
     if (type) list = list.filter((n) => n.type === type);
@@ -31,13 +31,13 @@ notificationsRouter.get(
 notificationsRouter.patch(
   '/:id',
   asyncHandler(async (req, res) => {
-    const v = validateNotificationPatch(req.body);
-    if (!v.ok) throw badRequest('حالة غير صالحة.', v.errors);
+    const v = validateNotificationPatch(req.body, req.lang);
+    if (!v.ok) throw badRequest(v.errors);
     const patch = { status: v.value.status, closed_reason: v.value.status === 'closed' ? 'user' : null };
     const row = unwrap(
       await req.db.from('notifications').update(patch).eq('owner_id', req.user.id).eq('id', req.params.id).select('*').maybeSingle()
     );
-    if (!row) throw notFound('التنبيه غير موجود.');
+    if (!row) throw notFound();
     ok(res, row);
   })
 );
@@ -50,8 +50,8 @@ notificationsRouter.post(
   })
 );
 
-// POST /api/reminders/check — تشغيل يدوي لفحص التذكيرات للمستخدم المصادق عليه
 export const remindersRouter = express.Router();
+
 remindersRouter.post(
   '/check',
   asyncHandler(async (req, res) => {

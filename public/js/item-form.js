@@ -1,20 +1,23 @@
-// نموذج موحد لإضافة الغرض وتعديله.
-import { initPage, $, esc, toast, showFieldErrors, withBusy, params, loadingState, errorState, todayISO, toDateISO, daysLabel } from './app.js';
+// Unified add / edit item form.
+import { initPage, $, esc, t, toast, showFieldErrors, withBusy, params, loadingState, errorState, todayISO, toDateISO, daysLabel, setTitle } from './app.js';
 import { CATEGORIES, CONDITIONS, IMAGE_RULES } from './shared/constants.js';
 import { validateItem } from './shared/validation.js';
 
-const { adapter } = await initPage({ active: 'items' });
-const form = $('#item-form');
 const id = params().get('id');
+const { adapter } = await initPage({ active: 'items', titleKey: id ? 'title.editItem' : 'title.addItem' });
+const form = $('#item-form');
 const today = todayISO();
+const MAX_SIDE = 1280;
+const MAX_RAW_BYTES = 10 * 1024 * 1024;
 
-$('#category').innerHTML = CATEGORIES.map((c) => `<option value="${c.value}">${c.icon} ${c.label}</option>`).join('');
-$('#condition').innerHTML = Object.entries(CONDITIONS).map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
-['purchase_date', 'last_used_at'].forEach((n) => (form.elements[n].max = today));
+$('#category').innerHTML = CATEGORIES.map((c) => `<option value="${c.value}">${c.icon} ${esc(t(`cat.${c.value}`))}</option>`).join('');
+$('#condition').innerHTML = CONDITIONS.map((v) => `<option value="${v}">${esc(t(`cond.${v}`))}</option>`).join('');
+['purchase_date', 'last_used_at'].forEach((name) => (form.elements[name].max = today));
 
-let imageData = null; // صورة جديدة بصيغة data URL
+let imageData = null;
 let removeImage = false;
 let hadImage = false;
+let original = null;
 
 function syncVisibility() {
   $('#other-wrap').classList.toggle('hidden', form.elements.category.value !== 'other');
@@ -31,26 +34,30 @@ form.elements.purchase_date.addEventListener('change', () => {
 
 try {
   const { settings } = await adapter.settings.get();
-  $('#alert-hint').textContent = `اتركه فارغًا لاستخدام الإعداد العام (${daysLabel(settings.expiryAlertDays)} للصلاحية، ${daysLabel(settings.replacementAlertDays)} للاستبدال).`;
-  $('#unused-hint').textContent = `اتركه فارغًا لاستخدام الإعداد العام (${daysLabel(settings.unusedDays)}).`;
-} catch { /* التلميحات اختيارية */ }
+  $('#alert-hint').textContent = t('form.alertHint', {
+    expiry: daysLabel(settings.expiryAlertDays),
+    replacement: daysLabel(settings.replacementAlertDays)
+  });
+  $('#unused-hint').textContent = t('form.unusedHint', { days: daysLabel(settings.unusedDays) });
+} catch {
+  /* hints are optional */
+}
 
 function setPreview(src) {
-  const box = $('#img-preview');
-  box.innerHTML = src ? `<img src="${esc(src)}" alt="">` : '🖼️';
+  $('#img-preview').innerHTML = src ? `<img src="${esc(src)}" alt="">` : '🖼️';
   $('#remove-image').classList.toggle('hidden', !src);
 }
 
-/** تصغير الصورة في المتصفح قبل الرفع (أقصى بُعد 1280px). */
+/** Downscales an image in the browser before upload. */
 function compressImage(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onerror = () => reject(new Error('تعذّرت قراءة الصورة.'));
+    reader.onerror = () => reject(new Error(t('form.imgRead')));
     reader.onload = () => {
       const img = new Image();
-      img.onerror = () => reject(new Error('الملف ليس صورة صالحة.'));
+      img.onerror = () => reject(new Error(t('form.imgInvalid')));
       img.onload = () => {
-        const scale = Math.min(1, 1280 / Math.max(img.width, img.height));
+        const scale = Math.min(1, MAX_SIDE / Math.max(img.width, img.height));
         const canvas = document.createElement('canvas');
         canvas.width = Math.round(img.width * scale);
         canvas.height = Math.round(img.height * scale);
@@ -69,25 +76,23 @@ form.elements.image.addEventListener('change', async (e) => {
   const file = e.target.files[0];
   showFieldErrors(form, {});
   if (!file) return;
-  if (!IMAGE_RULES.mimeTypes.includes(file.type)) {
+  const reject = (message) => {
+    imageData = null;
     e.target.value = '';
-    return showFieldErrors(form, { image: 'الصيغ المسموحة: JPG أو PNG أو WEBP.' });
-  }
-  if (file.size > 10 * 1024 * 1024) {
-    e.target.value = '';
-    return showFieldErrors(form, { image: 'الصورة كبيرة جدًا (الحد قبل التصغير ١٠ ميغابايت).' });
-  }
+    showFieldErrors(form, { image: message });
+  };
+  if (!IMAGE_RULES.mimeTypes.includes(file.type)) return reject(t('v.imageTypes'));
+  if (file.size > MAX_RAW_BYTES) return reject(t('form.imgRawTooBig'));
   try {
     imageData = await compressImage(file);
-    if (imageData.length * 0.75 > IMAGE_RULES.maxBytes) throw new Error('حجم الصورة بعد التصغير أكبر من ٢ ميغابايت.');
+    if (imageData.length * 0.75 > IMAGE_RULES.maxBytes) throw new Error(t('form.imgTooBig'));
     removeImage = false;
     setPreview(imageData);
   } catch (err) {
-    imageData = null;
-    e.target.value = '';
-    showFieldErrors(form, { image: err.message });
+    reject(err.message);
   }
 });
+
 $('#remove-image').addEventListener('click', () => {
   imageData = null;
   removeImage = hadImage;
@@ -114,14 +119,13 @@ function fill(item) {
   setPreview(item.image_url);
 }
 
-let original = null;
 if (id) {
-  document.title = 'تعديل غرض — آخر استخدام';
-  $('#form-title').textContent = 'تعديل الغرض';
+  $('#form-title').textContent = t('form.editTitle');
   $('#cancel-link').href = `item.html?id=${encodeURIComponent(id)}`;
   $('#form-host').insertAdjacentHTML('afterbegin', `<div id="form-loading">${loadingState()}</div>`);
   try {
     original = (await adapter.items.get(id)).item;
+    setTitle(original.name);
     fill(original);
     form.classList.remove('hidden');
     $('#form-loading').remove();
@@ -151,10 +155,9 @@ function collect() {
     unused_after_days: f.unused_after_days.value,
     notes: f.notes.value
   };
-  // لا نعيد إرسال آخر استخدام إن لم يغيّره المستخدم (حتى لا نفقد الساعة الدقيقة).
-  const lu = f.last_used_at.value;
-  if (!original || lu !== (toDateISO(original.last_used_at) || '')) data.last_used_at = lu;
-  else data.last_used_at = original.last_used_at;
+  // Keep the exact original timestamp when the date was not changed.
+  const lastUsed = f.last_used_at.value;
+  data.last_used_at = original && lastUsed === (toDateISO(original.last_used_at) || '') ? original.last_used_at : lastUsed;
   if (original) data.status = original.status;
   return data;
 }
@@ -167,7 +170,7 @@ form.addEventListener('submit', async (e) => {
   const check = validateItem(data);
   showFieldErrors(form, check.errors);
   if (!check.ok) {
-    errBox.textContent = 'تحقق من الحقول المظللة بالأحمر.';
+    errBox.textContent = t('form.fixFields');
     errBox.classList.remove('hidden');
     return;
   }
@@ -176,7 +179,7 @@ form.addEventListener('submit', async (e) => {
       const saved = id
         ? await adapter.items.update(id, data, { image: imageData || undefined, removeImage })
         : await adapter.items.create(data, { image: imageData || undefined });
-      toast(id ? 'حُفظت التعديلات.' : 'أُضيف الغرض.');
+      toast(t(id ? 'form.saved' : 'form.added'));
       location.href = `item.html?id=${encodeURIComponent(saved.id)}`;
     } catch (err) {
       if (err.details) showFieldErrors(form, err.details);

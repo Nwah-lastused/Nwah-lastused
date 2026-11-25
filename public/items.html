@@ -7,28 +7,29 @@
   <meta name="description" content="منصة «آخر استخدام» لتسجيل الممتلكات وتذكيرك بمواعيد استخدامها وانتهاء صلاحيتها واستبدالها.">
   <meta name="theme-color" content="#1f5a46">
   <link rel="icon" type="image/png" href="assets/favicon.png">
+  <script src="js/boot.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Readex+Pro:wght@500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-  <a class="skip-link" href="#main">تخطَّ إلى المحتوى</a>
+  <a class="skip-link" href="#main" data-i18n="skip">تخطَّ إلى المحتوى</a>
   <header id="app-header" class="site-header"></header>
   <main id="main" tabindex="-1">
     <div class="container">
       <div class="page-head">
-        <div><h1>أغراضي</h1><p id="count-line">&nbsp;</p></div>
-        <div class="actions"><a class="btn btn-primary" href="item-form.html">＋ إضافة غرض</a></div>
+        <div><h1 data-i18n="title.items">أغراضي</h1><p id="count-line">&nbsp;</p></div>
+        <div class="actions"><a class="btn btn-primary" href="item-form.html" data-i18n="dash.addItem">＋ إضافة غرض</a></div>
       </div>
       <form class="toolbar" id="filters" role="search">
-        <div class="field search"><label for="f-q">بحث بالاسم</label><input id="f-q" name="q" type="search" placeholder="مثال: شاحن، حليب…"></div>
-        <div class="field"><label for="f-category">التصنيف</label><select id="f-category" name="category"><option value="">كل التصنيفات</option></select></div>
-        <div class="field"><label for="f-state">الحالة</label><select id="f-state" name="state"></select></div>
-        <div class="field"><label for="f-sort">الترتيب</label><select id="f-sort" name="sort"></select></div>
-        <div class="seg" role="group" aria-label="طريقة العرض">
-          <button type="button" data-view="cards" aria-pressed="true">بطاقات</button>
-          <button type="button" data-view="table" aria-pressed="false">جدول</button>
+        <div class="field search"><label for="f-q" data-i18n="items.search">بحث بالاسم</label><input id="f-q" name="q" type="search" placeholder="مثال: شاحن، حليب…" data-i18n-attr="placeholder:items.searchPh"></div>
+        <div class="field"><label for="f-category" data-i18n="items.category">التصنيف</label><select id="f-category" name="category"></select></div>
+        <div class="field"><label for="f-state" data-i18n="items.state">الحالة</label><select id="f-state" name="state"></select></div>
+        <div class="field"><label for="f-sort" data-i18n="items.sort">الترتيب</label><select id="f-sort" name="sort"></select></div>
+        <div class="seg" role="group" aria-label="طريقة العرض" data-i18n-attr="aria-label:items.view">
+          <button type="button" data-view="cards" aria-pressed="true" data-i18n="items.cards">بطاقات</button>
+          <button type="button" data-view="table" aria-pressed="false" data-i18n="items.table">جدول</button>
         </div>
       </form>
       <div id="items" aria-live="polite"></div>

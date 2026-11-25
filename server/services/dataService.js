@@ -1,11 +1,9 @@
-// استعلامات مشتركة. كل استعلام يقيّد owner_id صراحةً (دفاع إضافي فوق RLS،
-// وضروري عند استخدام عميل admin في الفحص الدوري).
+// Shared queries. Every query filters by owner_id explicitly, in addition to RLS.
 import { mergeSettings } from '../../public/js/shared/reminders.js';
 import { unwrap, notFound } from '../utils/http.js';
 
 export async function getProfile(db, userId) {
-  const row = unwrap(await db.from('profiles').select('id, username, full_name, settings').eq('id', userId).maybeSingle());
-  return row;
+  return unwrap(await db.from('profiles').select('id, username, full_name, settings').eq('id', userId).maybeSingle());
 }
 
 export async function getSettings(db, userId) {
@@ -19,7 +17,7 @@ export async function listItems(db, userId) {
 
 export async function getItem(db, userId, id) {
   const row = unwrap(await db.from('items').select('*').eq('owner_id', userId).eq('id', id).maybeSingle());
-  if (!row) throw notFound('الغرض غير موجود.');
+  if (!row) throw notFound();
   return row;
 }
 

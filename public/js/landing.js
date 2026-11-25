@@ -1,10 +1,8 @@
-import { initPage, $ } from './app.js';
+import { initPage, $, t } from './app.js';
 
-const { adapter, user } = await initPage({ auth: 'optional' });
+const { adapter, user } = await initPage({ auth: 'optional', titleKey: 'title.home' });
+
 const start = $('#start-btn');
 start.href = user ? 'dashboard.html' : 'login.html';
-if (user) start.textContent = 'اذهب إلى لوحة التحكم';
-$('#mode-note').textContent =
-  adapter.mode === 'local'
-    ? 'تعمل المنصة الآن في الوضع التجريبي المحلي: البيانات تُحفظ في هذا المتصفح فقط.'
-    : 'بياناتك محفوظة بأمان في السحابة ومتاحة من أي جهاز.';
+start.textContent = t(user ? 'home.goDashboard' : 'home.start');
+$('#mode-note').textContent = t(adapter.mode === 'local' ? 'home.modeLocal' : 'home.modeRemote');

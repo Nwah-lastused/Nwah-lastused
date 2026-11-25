@@ -1,6 +1,6 @@
-import { initPage, $, $$, showFieldErrors, withBusy, params } from './app.js';
+import { initPage, $, $$, t, showFieldErrors, withBusy, params } from './app.js';
 
-const { adapter } = await initPage({ auth: 'guest' });
+const { adapter } = await initPage({ auth: 'guest', titleKey: 'title.login' });
 
 const loginForm = $('#login-form');
 const registerForm = $('#register-form');
@@ -14,13 +14,13 @@ function select(which) {
   registerForm.classList.toggle('hidden', isLogin);
   (isLogin ? loginForm : registerForm).querySelector('input').focus();
 }
+
 tabs.login.addEventListener('click', () => select('login'));
 tabs.register.addEventListener('click', () => select('register'));
 if (params().get('tab') === 'register') select('register');
 
 if (adapter.mode === 'local') {
-  $('#mode-alert').innerHTML =
-    '<div class="alert alert-info small" style="margin-bottom:1rem">الوضع التجريبي المحلي: Supabase غير مُعد بعد، لذا يُحفظ الحساب والبيانات في هذا المتصفح فقط. بعد إعداد Supabase تُحفظ الحسابات في قاعدة البيانات.</div>';
+  $('#mode-alert').innerHTML = `<div class="alert alert-info small mb-1">${t('login.localNote')}</div>`;
 }
 
 $$('.pw-toggle').forEach((btn) =>
@@ -28,14 +28,14 @@ $$('.pw-toggle').forEach((btn) =>
     const input = btn.previousElementSibling;
     const show = input.type === 'password';
     input.type = show ? 'text' : 'password';
-    btn.textContent = show ? 'إخفاء' : 'إظهار';
-    btn.setAttribute('aria-label', show ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور');
+    btn.textContent = t(show ? 'login.hide' : 'login.show');
+    btn.setAttribute('aria-label', t(show ? 'login.hidePw' : 'login.showPw'));
   })
 );
 
+/** Redirects to a same-site page only. */
 function goNext() {
   const next = params().get('next');
-  // منع التحويل إلى مواقع خارجية
   location.href = next && /^[a-z-]+\.html(\?[^#]*)?$/i.test(next) ? next : 'dashboard.html';
 }
 
@@ -57,5 +57,5 @@ function bind(form, errorBox, action) {
 }
 
 bind(loginForm, $('#login-error'), (d) => adapter.auth.login(d));
-$$('form [type=submit]').forEach((b) => (b.disabled = false));
 bind(registerForm, $('#register-error'), (d) => adapter.auth.register(d));
+$$('form [type=submit]').forEach((b) => (b.disabled = false));

@@ -7,21 +7,22 @@
   <meta name="description" content="منصة «آخر استخدام» لتسجيل الممتلكات وتذكيرك بمواعيد استخدامها وانتهاء صلاحيتها واستبدالها.">
   <meta name="theme-color" content="#1f5a46">
   <link rel="icon" type="image/png" href="assets/favicon.png">
+  <script src="js/boot.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Readex+Pro:wght@500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-  <a class="skip-link" href="#main">تخطَّ إلى المحتوى</a>
+  <a class="skip-link" href="#main" data-i18n="skip">تخطَّ إلى المحتوى</a>
   <header id="app-header" class="site-header"></header>
   <main id="main" tabindex="-1">
     <div class="container">
       <div class="page-head">
-        <div><h1 id="greeting">لوحة التحكم</h1><p id="today-line"></p></div>
+        <div><h1 id="greeting" data-i18n="title.dashboard">لوحة التحكم</h1><p id="today-line"></p></div>
         <div class="actions">
-          <button class="btn" type="button" id="quick-use">✋ تسجيل استخدام</button>
-          <a class="btn btn-primary" href="item-form.html">＋ إضافة غرض</a>
+          <button class="btn" type="button" id="quick-use" data-i18n="dash.quickUse">✋ تسجيل استخدام</button>
+          <a class="btn btn-primary" href="item-form.html" data-i18n="dash.addItem">＋ إضافة غرض</a>
         </div>
       </div>
       <div id="dashboard" aria-live="polite"></div>

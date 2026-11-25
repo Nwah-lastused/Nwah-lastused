@@ -1,5 +1,7 @@
-// ترويسات أمان أساسية وحدّ بسيط لمعدل الطلبات (في الذاكرة — يكفي لنسخة أولية بخادم واحد).
+// Security headers, request language and a simple in-memory rate limiter.
 import { env } from '../config/env.js';
+import { normalizeLang } from '../../public/js/shared/i18n.js';
+import { HttpError } from '../utils/http.js';
 
 export function securityHeaders(req, res, next) {
   const imgSrc = ["'self'", 'data:', 'blob:'];
@@ -25,7 +27,12 @@ export function securityHeaders(req, res, next) {
   next();
 }
 
-export function rateLimit({ windowMs = 60_000, max = 20, message = 'محاولات كثيرة، انتظر دقيقة ثم حاول مجددًا.' } = {}) {
+export function requestLang(req, res, next) {
+  req.lang = normalizeLang(String(req.headers['x-lang'] || '').toLowerCase());
+  next();
+}
+
+export function rateLimit({ windowMs = 60_000, max = 20 } = {}) {
   const hits = new Map();
   return (req, res, next) => {
     const now = Date.now();
@@ -35,7 +42,7 @@ export function rateLimit({ windowMs = 60_000, max = 20, message = 'محاولا
       hits.set(key, { start: now, count: 1 });
     } else if (++entry.count > max) {
       res.setHeader('Retry-After', Math.ceil((entry.start + windowMs - now) / 1000));
-      return res.status(429).json({ ok: false, error: { code: 'rate_limited', message } });
+      return next(new HttpError(429, 'rate_limited'));
     }
     if (hits.size > 5000) for (const [k, v] of hits) if (now - v.start > windowMs) hits.delete(k);
     next();
